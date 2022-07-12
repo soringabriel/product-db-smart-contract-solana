@@ -5,7 +5,7 @@ const args = require('minimist')(process.argv.slice(2));
 
 // Initialize Anchor and provider
 const anchor = require("@project-serum/anchor");
-const provider = anchor.Provider.env();
+const provider = anchor.AnchorProvider.env();
 // Configure the cluster.
 anchor.setProvider(provider);
 
@@ -43,7 +43,7 @@ async function main() {
     }
 
     try {
-        await program.rpc.addProduct('Product1', 'Description1', "2.32", {
+        await program.rpc.addProduct('sadsad', 'Description1', "2.32", {
             accounts: {
                 database: databaseAccount.publicKey,
             },
@@ -54,7 +54,7 @@ async function main() {
     }
 
     try {
-        await program.rpc.addProduct('Product2', 'Description2', "5", {
+        await program.rpc.addProduct('dsad', 'Description2', "5", {
             accounts: {
                 database: databaseAccount.publicKey,
             },
@@ -65,7 +65,7 @@ async function main() {
     }
 
     try {
-        await program.rpc.addProduct('Product3', 'Description2', "10", {
+        await program.rpc.addProduct('zccxzzx', 'Description2', "10", {
             accounts: {
                 database: databaseAccount.publicKey,
             },
@@ -76,7 +76,7 @@ async function main() {
     }
 
     try {
-        await program.rpc.removeProduct('Product1', {
+        await program.rpc.removeProduct('adswqwqee', {
             accounts: {
                 database: databaseAccount.publicKey,
             },

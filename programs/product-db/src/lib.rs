@@ -5,6 +5,7 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 #[account]
 pub struct Database {
     pub products: Vec<Product>,
+    pub pending_products: Vec<Product>,
     pub average_price: f64,
 }
 
@@ -23,12 +24,60 @@ pub mod product_db {
         let database: &mut Account<Database> = &mut ctx.accounts.database;
 
         database.products = Vec::new();
+        database.pending_products = Vec::new();
         database.average_price = 0.0;
 
         Ok(())
     }
 
-    pub fn add_product(ctx: Context<AddProduct>, name: String, description: String, price: f64) -> Result<()> {
+    pub fn propose_product(ctx: Context<ProposeProduct>, name: String, description: String, price: f64) -> Result<()> {
+        let database: &mut Account<Database> = &mut ctx.accounts.database;
+
+        if database.products.iter().any(|product| product.name == name) {
+            return err!(Errors::DuplicateProduct);
+        }
+
+        database.pending_products.push(Product{
+            name: name,
+            price: price,
+            description: description
+        });
+
+        Ok(())
+    }
+
+    pub fn approve_product(ctx: Context<ProductOperation>, position: u8) -> Result<()> {
+        let position = usize::from(position);
+        let database: &mut Account<Database> = &mut ctx.accounts.database;
+
+        if position >= database.pending_products.len() {
+            return err!(Errors::WrongIndex);
+        }
+
+        let product = database.pending_products.get(position).unwrap().clone();
+        database.products.push(product);
+        database.pending_products.remove(position);
+
+        let sum: f64 = database.products.iter().map(|product| product.price).sum();
+        database.average_price =  sum / database.products.len() as f64;
+
+        Ok(())
+    }
+
+    pub fn reject_product(ctx: Context<ProductOperation>, position: u8) -> Result<()> {
+        let position = usize::from(position);
+        let database: &mut Account<Database> = &mut ctx.accounts.database;
+
+        if position >= database.pending_products.len() {
+            return err!(Errors::WrongIndex);
+        }
+
+        database.pending_products.remove(position);
+
+        Ok(())
+    }
+
+    pub fn add_product(ctx: Context<ProductOperation>, name: String, description: String, price: f64) -> Result<()> {
         let database: &mut Account<Database> = &mut ctx.accounts.database;
 
         if database.products.iter().any(|product| product.name == name) {
@@ -47,7 +96,7 @@ pub mod product_db {
         Ok(())
     }
 
-    pub fn remove_product(ctx: Context<AddProduct>, name: String) -> Result<()> {
+    pub fn remove_product(ctx: Context<ProductOperation>, name: String) -> Result<()> {
         let database: &mut Account<Database> = &mut ctx.accounts.database;
 
         if !database.products.iter().any(|product| product.name == name) {
@@ -75,22 +124,27 @@ pub struct SetupDatabase<'info> {
 }
 
 #[derive(Accounts)]
-pub struct AddProduct<'info> {
+pub struct ProposeProduct<'info> {
     #[account(mut)]
     pub database: Account<'info, Database>,
 }
 
 #[derive(Accounts)]
-pub struct RemoveProduct<'info> {
+pub struct ProductOperation<'info> {
     #[account(mut)]
     pub database: Account<'info, Database>,
+    #[account(mut)]
+    pub user: Signer<'info>,
 }
 
 #[error_code]
 pub enum Errors {
-    #[msg("A product witht the same name already exists")]
+    #[msg("A product with the same name already exists")]
     DuplicateProduct,
 
     #[msg("No such product found to remove")]
     NoProductFoundToRemove,
+
+    #[msg("There is no pending product on the given index")]
+    WrongIndex,
 }
